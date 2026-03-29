@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}홈{% endblock %}
+{% block content %}
+    <div class="container">
+        <h1 class="mb-4">게시판</h1>
+        {% if posts %}
+            {% for post in posts %}
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h2 class="card-title">
+                            <a href="{{ url_for('post', post_id=post.id) }}" class="text-decoration-none">{{ post.title }}</a>
+                        </h2>
+                        <p class="card-text">{{ post.content[:200] }}{% if post.content|length > 200 %}...{% endif %}</p>
+                        <div class="text-muted">작성일: {{ post.date_posted.strftime('%Y-%m-%d') }}</div>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="alert alert-info">
+                아직 게시물이 없습니다. 
+                <a href="{{ url_for('new_post') }}" class="alert-link">첫 게시물을 작성해보세요!</a>
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}

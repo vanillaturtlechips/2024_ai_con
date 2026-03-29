@@ -1,0 +1,848 @@
+=== 작성한 코드 모음 ===
+
+
+==================================================
+파일명: app/templates/base.html (M)
+==================================================
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flask Board - {% block title %}{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .content-section {
+            background: #ffffff;
+            padding: 10px 20px;
+            border: 1px solid #dddddd;
+            border-radius: 3px;
+            margin-bottom: 20px;
+        }
+        body {
+            background-color: #f8f9fa;
+        }
+        .media {
+            background-color: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .alert {
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('home') }}">Flask Board</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('home') }}">홈</a>
+                    </li>
+                    {% if current_user.is_authenticated %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('new_post') }}">글쓰기</a>
+                        </li>
+                    {% endif %}
+                </ul>
+                <ul class="navbar-nav">
+                    {% if current_user.is_authenticated %}
+                        <li class="nav-item">
+                            <span class="nav-link">{{ current_user.username }}님 환영합니다</span>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('logout') }}">로그아웃</a>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('login') }}">로그인</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('register') }}">회원가입</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        {% block content %}{% endblock %}
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+==================================================
+
+==================================================
+파일명: app/templates/create_post.html (M)
+==================================================
+{% extends "base.html" %}
+{% block title %}새 게시글 작성 - Flask Board{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h2>{% if post %}게시글 수정{% else %}새 게시글 작성{% endif %}</h2>
+    <form method="POST">
+        {{ form.csrf_token }}
+        <div class="form-group">
+            <label for="title">Title</label>
+            <input type="text" class="form-control" id="title" name="title" 
+                   value="{{ post.title if post else '' }}" required>
+        </div>
+        <div class="form-group">
+            <label for="content">Content</label>
+            <textarea class="form-control" id="content" name="content" 
+                      rows="10" required>{{ post.content if post else '' }}</textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">
+            {% if post %}수정하기{% else %}작성하기{% endif %}
+        </button>
+        <a href="{{ url_for('home') }}" class="btn btn-secondary">취소</a>
+    </form>
+</div>
+{% endblock %}
+==================================================
+
+==================================================
+파일명: app/templates/post.html (M)
+==================================================
+{% extends "base.html" %}
+{% block title %}{{ post.title }} - Flask Board{% endblock %}
+{% block content %}
+<div class="container">
+    <div class="card mb-4">
+        <div class="card-body">
+            <h2 class="card-title">{{ post.title }}</h2>
+            <p class="card-text">{{ post.content }}</p>
+            <p class="text-muted">
+                작성자: {{ post.author.username }} | 
+                작성일: {{ post.date_posted.strftime('%Y-%m-%d') }}
+            </p>
+            {% if current_user.is_authenticated and post.author == current_user %}
+            <div class="btn-group">
+                <a href="{{ url_for('update_post', post_id=post.id) }}" class="btn btn-primary">수정</a>
+                <form action="{{ url_for('delete_post', post_id=post.id) }}" method="POST" style="display: inline;">
+                    {{ form.csrf_token }}
+                    <button type="submit" class="btn btn-danger" onclick="return confirm('정말 삭제하시겠습니까?');">삭제</button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if current_user.is_authenticated %}
+    <div class="card mb-4">
+        <div class="card-body">
+            <h4>댓글 작성</h4>
+            <form method="POST" action="{{ url_for('post', post_id=post.id) }}">
+                {{ form.csrf_token }}
+                <div class="form-group">
+                    <textarea class="form-control" id="content" name="content" rows="3" required 
+                              maxlength="500" placeholder="댓글을 입력하세요..."></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary mt-3">댓글 작성</button>
+            </form>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        댓글을 작성하려면 <a href="{{ url_for('login') }}">로그인</a>이 필요합니다.
+    </div>
+    {% endif %}
+
+    <div class="comments">
+        <h4>댓글 ({{ post.comments|length }})</h4>
+        {% for comment in post.comments %}
+        <div class="card mb-2">
+            <div class="card-body">
+                <p class="card-text">{{ comment.content }}</p>
+                <small class="text-muted">
+                    작성자: {{ comment.author.username if comment.author else '알 수 없음' }} | 
+                    작성일: {{ comment.date_posted.strftime('%Y-%m-%d') }}
+                </small>
+                {% if current_user.is_authenticated and comment.user_id == current_user.id %}
+                <form method="POST" action="{{ url_for('delete_comment', comment_id=comment.id) }}" class="mt-2">
+                    {{ form.csrf_token }}
+                    <button type="submit" class="btn btn-danger btn-sm" 
+                            onclick="return confirm('댓글을 삭제하시겠습니까?');">댓글 삭제</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock content %}
+==================================================
+
+==================================================
+파일명: app/__init__.py (M)
+==================================================
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager
+from flask_wtf.csrf import CSRFProtect
+from flask_migrate import Migrate
+from .content_detector import ContentFilter
+import os
+
+db = SQLAlchemy()
+login_manager = LoginManager()
+csrf = CSRFProtect()
+migrate = Migrate()
+
+def create_app():
+    app = Flask(__name__)
+    
+    app.config['SECRET_KEY'] = '12345678'
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://root:1234@localhost/kopo'
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config['GEMINI_API_KEY'] = 'YOUR_API_KEY'
+    
+    # 로그 디렉토리 생성
+    if not os.path.exists('logs'):
+        os.makedirs('logs')
+   
+    db.init_app(app)
+    login_manager.init_app(app)
+    csrf.init_app(app)
+    migrate.init_app(app, db)
+   
+    login_manager.login_view = 'login'
+    login_manager.login_message = '이 페이지에 접근하려면 로그인이 필요합니다.'
+
+    # ContentFilter 초기화
+    global content_detector
+    content_detector = ContentFilter(
+        json_path=os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'merged_toxic_data.json'),
+        api_key=app.config['GEMINI_API_KEY']
+    )
+   
+    with app.app_context():
+        from app import routes
+        routes.init_routes(app)
+   
+    return app
+
+@login_manager.user_loader
+def load_user(user_id):
+    from .models import User
+    return User.query.get(int(user_id))
+==================================================
+
+==================================================
+파일명: app/models.py (M)
+==================================================
+from app import db
+from flask_login import UserMixin
+from datetime import datetime
+
+class User(db.Model, UserMixin):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(20), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password = db.Column(db.String(255), nullable=False)
+    posts = db.relationship('Post', backref='author', lazy=True)
+    comments = db.relationship('Comment', backref='author', lazy=True)
+
+    def __repr__(self):
+        return f"User('{self.username}', '{self.email}')"
+
+class Post(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(100), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    date_posted = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    comments = db.relationship('Comment', backref='post', lazy=True,
+                             cascade='all, delete-orphan')
+
+    def __repr__(self):
+        return f"Post('{self.title}', '{self.date_posted}')"
+
+class Comment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    content = db.Column(db.Text, nullable=False)
+    date_posted = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)
+
+    def __repr__(self):
+        return f"Comment('{self.content}', '{self.date_posted}')"
+
+==================================================
+
+==================================================
+파일명: app/routes.py (M)
+==================================================
+from flask import render_template, url_for, flash, redirect, request
+from flask_login import login_user, current_user, logout_user, login_required
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_wtf import FlaskForm
+from wtforms import StringField, PasswordField, TextAreaField, SubmitField
+from wtforms.validators import DataRequired, Length, Email, EqualTo
+from sqlalchemy.exc import IntegrityError
+from app.models import User, Post, Comment
+from app import db, content_detector
+
+class LoginForm(FlaskForm):
+    username = StringField('아이디', validators=[DataRequired()])
+    password = PasswordField('비밀번호', validators=[DataRequired()])
+    submit = SubmitField('로그인')
+
+class RegistrationForm(FlaskForm):
+    username = StringField('아이디', validators=[DataRequired(), Length(min=4, max=20)])
+    email = StringField('이메일', validators=[DataRequired(), Email()])
+    password = PasswordField('비밀번호', validators=[DataRequired(), Length(min=6)])
+    confirm_password = PasswordField('비밀번호 확인', validators=[DataRequired(), EqualTo('password')])
+    submit = SubmitField('회원가입')
+
+class PostForm(FlaskForm):
+    title = StringField('제목', validators=[DataRequired()])
+    content = TextAreaField('내용', validators=[DataRequired()])
+    submit = SubmitField('저장')
+
+class CommentForm(FlaskForm):
+    content = TextAreaField('댓글', validators=[DataRequired()])
+    submit = SubmitField('작성')
+
+def init_routes(app):
+    @app.route("/")
+    @app.route("/home")
+    def home():
+        page = request.args.get('page', 1, type=int)
+        posts = Post.query.order_by(Post.date_posted.desc()).paginate(page=page, per_page=10)
+        return render_template('index.html', posts=posts)
+
+    @app.route("/register", methods=['GET', 'POST'])
+    def register():
+        if current_user.is_authenticated:
+            return redirect(url_for('home'))
+            
+        form = RegistrationForm()
+        if form.validate_on_submit():
+            try:
+                hashed_password = generate_password_hash(form.password.data)
+                user = User(
+                    username=form.username.data,
+                    email=form.email.data,
+                    password=hashed_password
+                )
+                db.session.add(user)
+                db.session.commit()
+                flash('회원가입이 완료되었습니다! 로그인해주세요.', 'success')
+                return redirect(url_for('login'))
+            except IntegrityError:
+                db.session.rollback()
+                flash('이미 존재하는 아이디 또는 이메일입니다.', 'danger')
+                
+        return render_template('register.html', form=form)
+
+    @app.route("/login", methods=['GET', 'POST'])
+    def login():
+        if current_user.is_authenticated:
+            return redirect(url_for('home'))
+        
+        form = LoginForm()
+        if form.validate_on_submit():
+            user = User.query.filter_by(username=form.username.data).first()
+            if user and check_password_hash(user.password, form.password.data):
+                login_user(user)
+                next_page = request.args.get('next')
+                return redirect(next_page) if next_page else redirect(url_for('home'))
+            flash('로그인에 실패했습니다. 아이디와 비밀번호를 확인해주세요.', 'danger')
+        return render_template('login.html', form=form)
+
+    @app.route("/logout")
+    @login_required
+    def logout():
+        logout_user()
+        return redirect(url_for('home'))
+
+    @app.route("/post/new", methods=['GET', 'POST'])
+    @login_required
+    def new_post():
+        form = PostForm()
+        if form.validate_on_submit():
+            is_toxic, result = content_detector.analyze_content(form.content.data)
+            
+            if is_toxic:
+                categories = ", ".join(result.get("categories", []))
+                flash(f'부적절한 내용이 감지되었습니다: {categories}', 'danger')
+                return render_template('create_post.html', form=form)
+            
+            try:
+                post = Post(
+                    title=form.title.data,
+                    content=form.content.data,
+                    author=current_user
+                )
+                db.session.add(post)
+                db.session.commit()
+                flash('게시글이 작성되었습니다!', 'success')
+                return redirect(url_for('home'))
+            except Exception as e:
+                db.session.rollback()
+                flash('게시글 작성 중 오류가 발생했습니다.', 'danger')
+                print(f"Error: {str(e)}")
+                
+        return render_template('create_post.html', form=form)
+
+    @app.route("/post/<int:post_id>", methods=['GET', 'POST'])
+    def post(post_id):
+        post = Post.query.get_or_404(post_id)
+        form = CommentForm()
+        
+        if form.validate_on_submit():
+            if not current_user.is_authenticated:
+                flash('댓글을 작성하려면 로그인이 필요합니다.', 'danger')
+                return redirect(url_for('login'))
+
+            is_toxic, result = content_detector.analyze_content(form.content.data)
+            
+            if is_toxic:
+                categories = ", ".join(result.get("categories", []))
+                flash(f'부적절한 내용이 감지되었습니다: {categories}', 'danger')
+            else:
+                try:
+                    comment = Comment(
+                        content=form.content.data,
+                        post=post,
+                        author=current_user
+                    )
+                    db.session.add(comment)
+                    db.session.commit()
+                    flash('댓글이 작성되었습니다!', 'success')
+                    return redirect(url_for('post', post_id=post.id))
+                except Exception as e:
+                    db.session.rollback()
+                    flash('댓글 작성 중 오류가 발생했습니다.', 'danger')
+                    print(f"Error: {str(e)}")
+                    
+        return render_template('post.html', post=post, form=form)
+
+    @app.route("/post/<int:post_id>/update", methods=['GET', 'POST'])
+    @login_required
+    def update_post(post_id):
+        post = Post.query.get_or_404(post_id)
+        if post.author != current_user:
+            flash('다른 사용자의 게시글은 수정할 수 없습니다.', 'danger')
+            return redirect(url_for('post', post_id=post.id))
+
+        form = PostForm()
+        if form.validate_on_submit():
+            is_toxic, result = content_detector.analyze_content(form.content.data)
+            
+            if is_toxic:
+                categories = ", ".join(result.get("categories", []))
+                flash(f'부적절한 내용이 감지되었습니다: {categories}', 'danger')
+            else:
+                try:
+                    post.title = form.title.data
+                    post.content = form.content.data
+                    db.session.commit()
+                    flash('게시글이 수정되었습니다!', 'success')
+                    return redirect(url_for('post', post_id=post.id))
+                except Exception as e:
+                    db.session.rollback()
+                    flash('게시글 수정 중 오류가 발생했습니다.', 'danger')
+                    print(f"Error: {str(e)}")
+                    
+        elif request.method == 'GET':
+            form.title.data = post.title
+            form.content.data = post.content
+            
+        return render_template('create_post.html', form=form, post=post)
+
+    @app.route("/post/<int:post_id>/delete", methods=['POST'])
+    @login_required
+    def delete_post(post_id):
+        try:
+            post = Post.query.get_or_404(post_id)
+            if post.author != current_user:
+                flash('다른 사용자의 게시글은 삭제할 수 없습니다.', 'danger')
+                return redirect(url_for('post', post_id=post.id))
+                
+            db.session.delete(post)
+            db.session.commit()
+            flash('게시글이 삭제되었습니다.', 'success')
+            return redirect(url_for('home'))
+        except Exception as e:
+            db.session.rollback()
+            flash('게시글 삭제 중 오류가 발생했습니다.', 'danger')
+            print(f"Error: {str(e)}")
+            return redirect(url_for('post', post_id=post_id))
+
+    @app.route("/comment/<int:comment_id>/delete", methods=['POST'])
+    @login_required
+    def delete_comment(comment_id):
+        try:
+            comment = Comment.query.get_or_404(comment_id)
+            if comment.author != current_user:
+                flash('다른 사용자의 댓글은 삭제할 수 없습니다.', 'danger')
+                return redirect(url_for('post', post_id=comment.post_id))
+                
+            post_id = comment.post_id
+            db.session.delete(comment)
+            db.session.commit()
+            flash('댓글이 삭제되었습니다.', 'success')
+            return redirect(url_for('post', post_id=post_id))
+        except Exception as e:
+            db.session.rollback()
+            flash('댓글 삭제 중 오류가 발생했습니다.', 'danger')
+            print(f"Error: {str(e)}")
+            return redirect(url_for('post', post_id=comment.post_id))
+
+    return app
+==================================================
+
+==================================================
+파일명: config.py (M)
+==================================================
+import os
+
+class Config:
+   SECRET_KEY = '123456789'  # 니중에 넣을 해쉬값
+   SQLALCHEMY_DATABASE_URI = 'mysql://root:1234@localhost/kopo'
+   SQLALCHEMY_TRACK_MODIFICATIONS = False
+   WTF_CSRF_ENABLED = True
+==================================================
+
+==================================================
+파일명: run.py (M)
+==================================================
+from app import create_app
+
+app = create_app()
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+==================================================
+
+==================================================
+파일명: app/templates/login.html (U)
+==================================================
+{% extends "base.html" %}
+{% block title %}로그인{% endblock %}
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="content-section">
+                <form method="POST" action="">
+                    {{ form.csrf_token }}
+                    <h2 class="text-center mb-4">로그인</h2>
+                    {% with messages = get_flashed_messages() %}
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert alert-danger">{{ message }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+                    <div class="form-group mb-3">
+                        <label for="username">아이디</label>
+                        <input type="text" class="form-control" id="username" name="username" required>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="password">비밀번호</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                    <div class="form-group text-center">
+                        <button type="submit" class="btn btn-primary">로그인</button>
+                    </div>
+                    <div class="text-center mt-3">
+                        <small class="text-muted">
+                            계정이 없으신가요? <a href="{{ url_for('register') }}">회원가입</a>
+                        </small>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+==================================================
+
+==================================================
+파일명: app/templates/register.html (U)
+==================================================
+{% extends "base.html" %}
+{% block title %}회원가입{% endblock %}
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="content-section">
+                <form method="POST" action="">
+                    {{ form.csrf_token }}
+                    <h2 class="text-center mb-4">회원가입</h2>
+                    {% with messages = get_flashed_messages() %}
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert alert-danger">{{ message }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+                    <div class="form-group mb-3">
+                        <label for="username">아이디</label>
+                        <input type="text" class="form-control" id="username" name="username" required>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="email">이메일</label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="password">비밀번호</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="confirm_password">비밀번호 확인</label>
+                        <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                    </div>
+                    <div class="form-group text-center">
+                        <button type="submit" class="btn btn-primary">회원가입</button>
+                    </div>
+                    <div class="text-center mt-3">
+                        <small class="text-muted">
+                            이미 계정이 있으신가요? <a href="{{ url_for('login') }}">로그인</a>
+                        </small>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+==================================================
+
+==================================================
+파일명: app/content_detector.py (U)
+==================================================
+from typing import Dict, List, Tuple, Optional
+import json
+import logging
+from datetime import datetime
+import re
+import os
+
+class ToxicContentDetector:
+    def __init__(self, json_path: str):
+        self.json_path = json_path
+        self._setup_logging()
+        self.toxic_data = self._load_toxic_data()
+        print(f"데이터 로드 완료: {len(self.toxic_data)}개 항목")
+
+    def _setup_logging(self):
+        log_dir = 'logs'
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+            
+        log_file = os.path.join(log_dir, 'content_filter.log')
+        logging.basicConfig(
+            filename=log_file,
+            level=logging.INFO,
+            format='%(asctime)s - %(levelname)s - %(message)s',
+            encoding='utf-8'
+        )
+        self.logger = logging.getLogger(__name__)
+
+    def _load_toxic_data(self) -> List[Dict]:
+        try:
+            with open(self.json_path, 'r', encoding='utf-8-sig') as f:
+                data = json.load(f)
+                return [entry for entry in data if self._is_valid_entry(entry)]
+        except Exception as e:
+            print(f"데이터 로딩 중 오류: {str(e)}")
+            return []
+
+    def check_content(self, text: str) -> Tuple[bool, Dict]:
+        try:
+            if not text or len(text.strip()) < 2:
+                return False, self._create_result(False, set(), [])
+
+            # 기본 금지어 검사
+            basic_result = self._check_basic_toxic_words(text)
+            if basic_result["is_toxic"]:
+                self._log_toxic_content(text, basic_result)
+                return True, basic_result
+
+            # 고급 패턴 검사
+            toxic_matches = []
+            toxic_categories = set()
+            text_lower = text.lower()
+
+            for entry in self.toxic_data:
+                # 유해성 점수가 2 이상인 항목만 검사
+                if not any(entry.get(cat, 0) >= 2 for cat in ["욕설", "성혐오", "모욕", "외설", "폭력위협/범죄조장"]):
+                    continue
+
+                emphasized = self._get_emphasized_parts(entry)
+                
+                for part in emphasized:
+                    part = part.strip().lower()
+                    if not self._is_valid_toxic_pattern(part):
+                        continue
+
+                    # 정확한 단어 매칭을 위한 정규식 패턴
+                    pattern = rf'\b{re.escape(part)}\b'
+                    if re.search(pattern, text_lower):
+                        category = self._determine_category(entry)
+                        if category:
+                            toxic_categories.add(category)
+                            toxic_matches.append({
+                                'matched_text': part,
+                                'category': category,
+                                'context': self._get_surrounding_context(text, part)
+                            })
+
+            result = self._create_result(bool(toxic_matches), toxic_categories, toxic_matches)
+            if result["is_toxic"]:
+                self._log_toxic_content(text, result)
+            
+            return result["is_toxic"], result
+
+        except Exception as e:
+            error_msg = f"콘텐츠 검사 중 오류: {str(e)}"
+            self.logger.error(error_msg)
+            return False, {"error": error_msg}
+
+    def _get_emphasized_parts(self, entry: Dict) -> List[str]:
+        """강조된 부분 추출"""
+        highlighted = entry.get("대상하이라이트", "").strip()
+        if not highlighted:
+            return []
+        return re.findall(r"''(.*?)''", highlighted)
+
+    def _check_basic_toxic_words(self, text: str) -> Dict:
+        basic_toxic_words = {
+            "씨발", "병신", "개새끼", "지랄", "니미", "좆", "새끼",
+            "미친", "죽여"
+        }
+        
+        matches = []
+        text_lower = text.lower()
+        
+        for word in basic_toxic_words:
+            pattern = rf'\b{re.escape(word)}\b'
+            if re.search(pattern, text_lower):
+                matches.append({
+                    'matched_text': word,
+                    'category': "욕설/비속어",
+                    'context': self._get_surrounding_context(text, word)
+                })
+        
+        return self._create_result(bool(matches), {"욕설/비속어"} if matches else set(), matches)
+
+    def _is_valid_toxic_pattern(self, pattern: str) -> bool:
+        """유해 패턴 유효성 검사"""
+        if not pattern or len(pattern.strip()) < 2:
+            return False
+
+        safe_patterns = {
+            "좋은", "감사", "행복", "사랑", "축하", "건강", "화이팅", "파이팅", 
+            "보내", "좋다", "좋아", "감사", "희망", "긍정", "노력", "열심히",
+            "하루", "안녕", "반가", "환영", "수고", "화이팅", "파이팅"
+        }
+        
+        pattern = pattern.lower()
+        return (
+            pattern not in safe_patterns and
+            not any(safe.lower() in pattern.lower() for safe in safe_patterns)
+        )
+
+    def _is_valid_entry(self, entry: Dict) -> bool:
+        if not isinstance(entry, dict):
+            return False
+            
+        if "대상하이라이트" not in entry or not entry.get("대상하이라이트"):
+            return False
+
+        # 최소 하나의 카테고리가 2점 이상
+        categories = ["욕설", "성혐오", "모욕", "외설", "폭력위협/범죄조장"]
+        return any(entry.get(cat, 0) >= 2 for cat in categories)
+
+    def _determine_category(self, entry: Dict) -> Optional[str]:
+        category_map = {
+            "욕설": ("욕설/비속어", 2),
+            "성혐오": ("성차별", 2),
+            "모욕": ("모욕", 2),
+            "외설": ("외설", 2),
+            "폭력위협/범죄조장": ("폭력/범죄", 2)
+        }
+        
+        max_score = 0
+        selected_category = None
+        
+        for db_category, (display_category, threshold) in category_map.items():
+            score = entry.get(db_category, 0)
+            if score >= threshold and score > max_score:
+                max_score = score
+                selected_category = display_category
+                
+        return selected_category
+
+    def _get_surrounding_context(self, text: str, matched_word: str, context_words: int = 3) -> str:
+        words = text.split()
+        try:
+            for i, word in enumerate(words):
+                if matched_word.lower() in word.lower():
+                    start = max(0, i - context_words)
+                    end = min(len(words), i + context_words + 1)
+                    return " ".join(words[start:end])
+        except:
+            return matched_word
+        return matched_word
+
+    def _create_result(self, is_toxic: bool, categories: set, matches: List[Dict]) -> Dict:
+        return {
+            "is_toxic": is_toxic,
+            "categories": sorted(list(categories)),
+            "matches": matches,
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+
+    def _log_toxic_content(self, text: str, result: Dict):
+        log_message = f"\n{'=' * 50}\n"
+        log_message += f"검사 시간: {result['timestamp']}\n"
+        log_message += f"입력 텍스트: {text}\n"
+        
+        if result['categories']:
+            log_message += f"감지된 카테고리: {', '.join(result['categories'])}\n"
+            log_message += "감지된 패턴:\n"
+            for match in result['matches']:
+                log_message += f"- {match['category']}: {match['matched_text']}\n"
+                log_message += f"  문맥: {match['context']}\n"
+        else:
+            log_message += "감지된 유해 콘텐츠 없음\n"
+            
+        log_message += "=" * 50
+        self.logger.info(log_message)
+
+class ContentFilter:
+    def __init__(self, json_path: str, api_key: str = None):
+        self.detector = ToxicContentDetector(json_path)
+        print("ContentFilter 초기화 완료")
+
+    def analyze_content(self, text: str) -> Tuple[bool, Dict]:
+        return self.detector.check_content(text)
+==================================================

@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}{{ post.title }} - Flask Board{% endblock %}
+{% block content %}
+<div class="container">
+    <div class="card mb-4">
+        <div class="card-body">
+            <h2 class="card-title">{{ post.title }}</h2>
+            <p class="card-text">{{ post.content }}</p>
+            <p class="text-muted">
+                작성자: {{ post.author.username }} | 
+                작성일: {{ post.date_posted.strftime('%Y-%m-%d') }}
+            </p>
+            {% if current_user.is_authenticated and post.author == current_user %}
+            <div class="btn-group">
+                <a href="{{ url_for('update_post', post_id=post.id) }}" class="btn btn-primary">수정</a>
+                <form action="{{ url_for('delete_post', post_id=post.id) }}" method="POST" style="display: inline;">
+                    {{ form.csrf_token }}
+                    <button type="submit" class="btn btn-danger" onclick="return confirm('정말 삭제하시겠습니까?');">삭제</button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if current_user.is_authenticated %}
+    <div class="card mb-4">
+        <div class="card-body">
+            <h4>댓글 작성</h4>
+            <form method="POST" action="{{ url_for('post', post_id=post.id) }}">
+                {{ form.csrf_token }}
+                <div class="form-group">
+                    <textarea class="form-control" id="content" name="content" rows="3" required 
+                              maxlength="500" placeholder="댓글을 입력하세요..."></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary mt-3">댓글 작성</button>
+            </form>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        댓글을 작성하려면 <a href="{{ url_for('login') }}">로그인</a>이 필요합니다.
+    </div>
+    {% endif %}
+
+    <div class="comments">
+        <h4>댓글 ({{ post.comments|length }})</h4>
+        {% for comment in post.comments %}
+        <div class="card mb-2">
+            <div class="card-body">
+                <p class="card-text">{{ comment.content }}</p>
+                <small class="text-muted">
+                    작성자: {{ comment.author.username if comment.author else '알 수 없음' }} | 
+                    작성일: {{ comment.date_posted.strftime('%Y-%m-%d') }}
+                </small>
+                {% if current_user.is_authenticated and comment.user_id == current_user.id %}
+                <form method="POST" action="{{ url_for('delete_comment', comment_id=comment.id) }}" class="mt-2">
+                    {{ form.csrf_token }}
+                    <button type="submit" class="btn btn-danger btn-sm" 
+                            onclick="return confirm('댓글을 삭제하시겠습니까?');">댓글 삭제</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock content %}
