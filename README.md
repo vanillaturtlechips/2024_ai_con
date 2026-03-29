@@ -9,6 +9,8 @@
 온라인 커뮤니티에서 관리자 없이도 유해 게시글/댓글이 자동으로 차단되지 않는 문제를 해결합니다.  
 실제 한국어 유해 발화 데이터셋(`merged_toxic_data.json`)을 기반으로 욕설, 성차별, 모욕, 외설, 폭력/범죄 조장 표현을 실시간으로 감지합니다.
 
+<img width="1284" height="425" alt="제목 없는 디자인" src="https://github.com/user-attachments/assets/5c1d9db1-3800-4ee0-b3d4-605977a5e02a" />
+
 ---
 
 ## 주요 기능
